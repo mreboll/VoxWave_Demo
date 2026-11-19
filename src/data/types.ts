@@ -76,9 +76,11 @@ export interface Clinician {
   clinic: string;
 }
 
-/** Messages on the `voxwave-demo` BroadcastChannel. */
+/** Messages on the `voxwave-demo` channel (BroadcastChannel in this browser, Supabase Realtime across devices). */
 export type DemoMessage =
   | { type: 'session:new'; sessionId: string }
   | { type: 'device:synced'; deviceId: string; patientId: string; count: number }
   | { type: 'alert:replay' }
-  | { type: 'demo:reset' };
+  | { type: 'demo:reset' }
+  /** Shared data changed elsewhere (note, setting, demo patient): pull it again (D114). */
+  | { type: 'state:changed' };

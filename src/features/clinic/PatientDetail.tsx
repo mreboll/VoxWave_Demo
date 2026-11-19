@@ -257,7 +257,7 @@ function Notes({ patient }: { patient: Patient }) {
   const [draft, setDraft] = useState(saved);
   const dirty = draft !== saved;
 
-  // Save shortly after typing stops (stored in this browser only).
+  // Save shortly after typing stops (shared with the other devices when Supabase is on, D114).
   useEffect(() => {
     if (!dirty) return;
     const t = setTimeout(() => setNote(patient.id, draft), 500);

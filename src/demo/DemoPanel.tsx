@@ -102,8 +102,14 @@ export function DemoPanel() {
     },
     reset: async () => {
       setBusy('reset');
-      await resetDemo(); // also turns the rehearsal clock off; other windows reload on 'demo:reset'
-      reloadAfterReset();
+      try {
+        await resetDemo(); // also turns the rehearsal clock off; other windows and devices reload on 'demo:reset'
+        reloadAfterReset();
+      } catch (e) {
+        console.error('[reset] shared data not deleted:', e);
+        setBusy(null);
+        done('Reset failed: no connection to the shared data');
+      }
     },
   };
 
