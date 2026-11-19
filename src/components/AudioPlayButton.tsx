@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { motion } from 'motion/react';
 import { Pause, Play, VolumeX } from 'lucide-react';
+import { playbackProgress } from '../audio/progress';
 import { resolveActivityAudio } from '../audio/storage';
 import type { Activity } from '../data/types';
 
@@ -26,7 +27,8 @@ export const usePlayback = create<PlaybackState>((set, get) => ({
     audio ??= new Audio();
     audio.src = src.url;
     revoke = src.revoke ? () => URL.revokeObjectURL(src.url) : null;
-    audio.ontimeupdate = () => audio && set({ progress: audio.duration ? audio.currentTime / audio.duration : 0 });
+    audio.ontimeupdate = () =>
+      audio && set({ progress: playbackProgress(audio.currentTime, audio.duration, activity.durationSec) });
     audio.onended = () => get().stop();
     set({ current: id, progress: 0 });
     try {
