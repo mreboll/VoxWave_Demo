@@ -1,0 +1,201 @@
+@import 'tailwindcss';
+
+/* Brand tokens (brief §4.1). Each one becomes a CSS variable (--color-*) and a Tailwind color. */
+@theme {
+  --color-navy: #092634;
+  --color-ink: #092634;
+  --color-navy-deep: #04141c;
+  --color-teal: #004e72;
+  --color-teal-bright: #2f9bcb;
+  --color-coral: #ff6e42;
+  --color-coral-soft: #ff9a7a;
+  --color-paper: #f1ede4;
+  --color-paper-shade: #e4ded2;
+  --color-card: #fbf9f4;
+  --color-white: #f4f8fa;
+  --color-ink-soft: rgba(9, 38, 52, 0.55);
+  --color-ink-faint: rgba(9, 38, 52, 0.12);
+  --color-stable: #2e8b6e;
+  --color-watch: #e0a33a;
+  --color-alert: #ff6e42;
+
+  /*
+   * Derived tones (D104). The §4.1 palette above is untouched; these are darker or more opaque steps of the
+   * same colours, added so text reaches WCAG AA (4.5:1 small text, 3:1 large text) on paper and card.
+   */
+  /* Text and icons on a solid coral surface. One token: set it back to #f4f8fa to return to white on coral. */
+  --color-on-coral: #092634;
+  /* Coral for small text on paper/card (4.7:1) and for large display text (3.2:1). */
+  --color-coral-ink: #ad4729;
+  --color-coral-strong: #d85b35;
+  /* Small secondary text: inkSoft (0.55) is 3.5:1 on paper; this step is 5.2:1. */
+  --color-ink-muted: rgba(9, 38, 52, 0.68);
+  /* Hairline one step lighter than inkFaint, for rules inside a card. */
+  --color-ink-hairline: rgba(9, 38, 52, 0.07);
+  --color-stable-ink: #216a54;
+  --color-watch-ink: #845d1d;
+
+  --font-display: 'Sora Variable', 'Sora', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --tracking-label: 0.15em;
+  --tracking-tightest: -0.04em;
+
+  /* Three neutral (navy) elevation steps. No coloured glows on paper (§4.1). */
+  --shadow-card: 0 1px 2px rgba(9, 38, 52, 0.04), 0 6px 16px -10px rgba(9, 38, 52, 0.14);
+  --shadow-raised: 0 2px 4px rgba(9, 38, 52, 0.05), 0 16px 32px -16px rgba(9, 38, 52, 0.24);
+  --shadow-overlay: 0 8px 16px -8px rgba(4, 20, 28, 0.18), 0 32px 64px -24px rgba(4, 20, 28, 0.45);
+  /* Under primary (coral) buttons: a short neutral drop instead of a coral glow. */
+  --shadow-action: 0 1px 2px rgba(9, 38, 52, 0.1), 0 10px 20px -12px rgba(9, 38, 52, 0.45);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  /*
+   * Focus ring in two tones so it shows on every surface: the coral outline reads on navy, the navy inner
+   * ring on paper and on coral (coral alone is 2.4:1 on paper).
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-coral);
+    outline-offset: 2px;
+  }
+  /* Not on containers that only take programmatic focus (the sync dialog): they keep their own shadow. */
+  :focus-visible:not([tabindex='-1']) {
+    box-shadow: 0 0 0 2px var(--color-navy) !important;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  /* Uppercase labels like LIVE CHECK-IN */
+  .label {
+    @apply text-[11px] font-semibold uppercase text-ink-muted;
+    letter-spacing: var(--tracking-label);
+  }
+
+  /* Big numbers: Sora, tight tracking, fixed-width digits (§4.2). */
+  .numeral {
+    @apply font-display font-bold tabular-nums;
+    letter-spacing: var(--tracking-tightest);
+    line-height: 1;
+  }
+
+  /* Card surface shared by both portals: card colour, hairline edge, the lowest elevation step. */
+  .surface {
+    @apply bg-card shadow-card ring-1 ring-ink-faint ring-inset;
+  }
+
+  /*
+   * Hover / pressed for every button and button-like link. Only opacity and transform change: a tint layer
+   * fades in on hover and deepens when pressed. `.btn-press` adds the pressed scale for elements that Motion
+   * does not already scale (whileTap).
+   */
+  .btn {
+    position: relative;
+    isolation: isolate;
+  }
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease-out;
+  }
+  @media (hover: hover) {
+    .btn:hover:not(:disabled)::after {
+      opacity: 0.08;
+    }
+  }
+  .btn:active:not(:disabled)::after {
+    opacity: 0.14;
+  }
+  .btn-press {
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .btn-press:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+/* Matte paper grain: fixed SVG noise over everything, never intercepting input. */
+.grain::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.035 0 0 0 0 0.15 0 0 0 0 0.2 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* One-page report (brief §7.4): exactly one A4 page, no app chrome, colours kept. */
+@page {
+  size: A4;
+  margin: 0;
+}
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  .grain::before,
+  .no-print {
+    display: none !important;
+  }
+  .report-root {
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+  .report-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    opacity: 1 !important;
+    height: 297mm;
+    overflow: hidden;
+    break-after: avoid;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Demo panel "Reduced motion" toggle: same rules as the media query below (D72). */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

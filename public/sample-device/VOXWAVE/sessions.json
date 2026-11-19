@@ -1,0 +1,251 @@
+{
+  "format": "voxwave-sessions/1",
+  "patientId": "P-0142",
+  "sessions": [
+    {
+      "id": "D-2026-11-14",
+      "startedAt": "2026-11-14T06:20:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 5.1,
+          "audio": "audio/2026-11-14_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6.3,
+          "audio": "audio/2026-11-14_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 21.8,
+          "audio": "audio/2026-11-14_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.6,
+          "pitchHz": 128,
+          "rhythmSylPerSec": 4.3,
+          "pauseSec": 0.36
+        }
+      },
+      "quality": {
+        "noise": "low"
+      }
+    },
+    {
+      "id": "D-2026-11-15",
+      "startedAt": "2026-11-15T05:42:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 5,
+          "audio": "audio/2026-11-15_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6.1,
+          "audio": "audio/2026-11-15_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 19.4,
+          "audio": "audio/2026-11-15_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.7,
+          "pitchHz": 127,
+          "rhythmSylPerSec": 4.2,
+          "pauseSec": 0.37
+        }
+      },
+      "quality": {
+        "noise": "low"
+      }
+    },
+    {
+      "id": "D-2026-11-16",
+      "startedAt": "2026-11-16T06:35:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 5.2,
+          "audio": "audio/2026-11-16_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6.4,
+          "audio": "audio/2026-11-16_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 23.1,
+          "audio": "audio/2026-11-16_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.6,
+          "pitchHz": 129,
+          "rhythmSylPerSec": 4.3,
+          "pauseSec": 0.35
+        }
+      },
+      "quality": {
+        "noise": "medium"
+      }
+    },
+    {
+      "id": "D-2026-11-17",
+      "startedAt": "2026-11-17T05:58:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 4.9,
+          "audio": "audio/2026-11-17_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6.2,
+          "audio": "audio/2026-11-17_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 20.6,
+          "audio": "audio/2026-11-17_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.5,
+          "pitchHz": 128,
+          "rhythmSylPerSec": 4.4,
+          "pauseSec": 0.36
+        }
+      },
+      "quality": {
+        "noise": "low"
+      }
+    },
+    {
+      "id": "D-2026-11-18",
+      "startedAt": "2026-11-18T06:12:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 5.1,
+          "audio": "audio/2026-11-18_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6,
+          "audio": "audio/2026-11-18_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 22.4,
+          "audio": "audio/2026-11-18_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.6,
+          "pitchHz": 126,
+          "rhythmSylPerSec": 4.3,
+          "pauseSec": 0.37
+        }
+      },
+      "quality": {
+        "noise": "low"
+      }
+    },
+    {
+      "id": "D-2026-11-19",
+      "startedAt": "2026-11-19T05:47:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 5,
+          "audio": "audio/2026-11-19_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6.3,
+          "audio": "audio/2026-11-19_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 18.9,
+          "audio": "audio/2026-11-19_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.7,
+          "pitchHz": 128,
+          "rhythmSylPerSec": 4.2,
+          "pauseSec": 0.36
+        }
+      },
+      "quality": {
+        "noise": "low"
+      }
+    },
+    {
+      "id": "D-2026-11-20",
+      "startedAt": "2026-11-20T06:05:00Z",
+      "channel": "device",
+      "activities": [
+        {
+          "type": "sustained_vowel",
+          "durationSec": 5.1,
+          "audio": "audio/2026-11-20_aah.wav"
+        },
+        {
+          "type": "reading",
+          "durationSec": 6.2,
+          "audio": "audio/2026-11-20_read.wav"
+        },
+        {
+          "type": "conversation",
+          "durationSec": 21.3,
+          "audio": "audio/2026-11-20_chat.wav"
+        }
+      ],
+      "result": {
+        "status": "stable",
+        "deviceAlertShown": false,
+        "metrics": {
+          "jitterPct": 1.6,
+          "pitchHz": 128,
+          "rhythmSylPerSec": 4.3,
+          "pauseSec": 0.36
+        }
+      },
+      "quality": {
+        "noise": "low"
+      }
+    }
+  ]
+}
