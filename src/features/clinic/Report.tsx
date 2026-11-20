@@ -8,7 +8,7 @@ import { TrendChart } from '../../components/charts/TrendChart';
 import { StatusChip } from '../../components/StatusChip';
 import { usePatient } from '../../data/store';
 import { CLINICIAN, weekKeys } from '../../data/seed';
-import { formatDay, formatSessionTime, isSameLocalDay } from '../../data/dates';
+import { formatDay, formatSessionTime, isSameLocalDay, sessionTime } from '../../data/dates';
 import { BIOMARKERS, deltaLevel, formatDelta, formatMetric } from '../../data/biomarkers';
 import { patientNumber, qualityFlags, reportSummary } from '../../data/clinicText';
 import { springSoft } from '../../design/motion';
@@ -41,9 +41,9 @@ export function Report() {
   const now = clockNow();
   const weeks = weekKeys(now);
   const periodStart = new Date(`${weeks[0]}T12:00:00`);
-  const inPeriod = sessions.filter((s) => new Date(s.startedAt) >= periodStart);
+  const inPeriod = sessions.filter((s) => new Date(sessionTime(s)) >= periodStart);
   const last = sessions.at(-1);
-  const latestLabel = last && isSameLocalDay(new Date(last.startedAt), now) ? 'Today' : last ? formatDay(last.startedAt) : 'Latest';
+  const latestLabel = last && isSameLocalDay(new Date(sessionTime(last)), now) ? 'Today' : last ? formatDay(sessionTime(last)) : 'Latest';
 
   return (
     <div className="report-root min-h-dvh pb-16">
@@ -123,7 +123,7 @@ export function Report() {
 
           {/* Biomarkers: one row each — measure, value, baseline, change */}
           <section className="mt-4">
-            <SectionTitle>Biomarkers vs personal baseline · {latestLabel}</SectionTitle>
+            <SectionTitle note={last?.result.metricsSource === 'demo' ? 'Demo values' : undefined}>Biomarkers vs personal baseline · {latestLabel}</SectionTitle>
             <table className="mt-1 w-full border-collapse text-[12px]">
               <tbody>
                 {BIOMARKERS.map((def) => {

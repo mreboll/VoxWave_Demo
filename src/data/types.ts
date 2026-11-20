@@ -32,9 +32,14 @@ export interface Session {
   patientId: string;
   /** ISO 8601, UTC. */
   startedAt: string;
+  /** False when the device could not confirm its clock at capture. Keep its original reading in startedAt. */
+  captureClockSynced?: boolean;
+  /** Server receipt, or first receipt in this browser for an offline export. */
+  receivedAt?: string;
+  transcription?: { status: 'pending' | 'failed' } | { status: 'ready'; text: string };
   channel: Channel;
   activities: Activity[];
-  result: { status: ResultStatus; metrics: Metrics };
+  result: { status: ResultStatus; metrics: Metrics; metricsSource?: 'demo' };
   quality?: { noise: NoiseLevel };
   /** Done in demo mode (no microphone): the clinic labels it and plays sample clips. */
   simulated?: boolean;

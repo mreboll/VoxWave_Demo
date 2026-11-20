@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   DeviceImportError,
+  filesFromDirectoryHandle,
+  filesFromFileList,
   locateExportRoot,
   mergeSyncedSessions,
   parseDevice,
@@ -107,6 +109,66 @@ describe('device import — validation', () => {
 });
 
 describe('re-syncing a device', () => {
+  it('orders two unsynchronised recordings with the same receipt by their observed capture time', () => {
+    const device = parseDevice(json('device.json'));
+    const sample = (json('sessions.json').sessions as Record<string, unknown>[])[0];
+    const imported = {
+      ...sample, captureClockSynced: false, receivedAt: '2026-11-20T10:00:00.000Z',
+    };
+    const { sessions } = parseSessions({
+      format: 'voxwave-sessions/1',
+      sessions: [
+        { ...imported, id: 'new', startedAt: '1970-01-01T00:01:23Z' },
+        { ...imported, id: 'old', startedAt: '1970-01-01T00:00:08Z' },
+      ],
+    }, device);
+    expect(sessions.map((s) => s.id)).toEqual(['old', 'new']);
+    expect(mergeSyncedSessions(sessions, sessions).map((s) => s.id)).toEqual(['old', 'new']);
+  });
+
+  it('keeps the hardware recording and completed transcript when a stale export is imported again', async () => {
+    const take = {
+      id: 'take-1', startedAt: '1970-01-01T00:00:13Z', captureClockSynced: false,
+      receivedAt: '2026-11-20T08:05:04Z',
+      activities: [{ type: 'conversation', audio: 'audio/take-1.wav', durationSec: 8 }],
+      result: { status: 'stable', metricsSource: 'demo', metrics: { jitterPct: 1, pitchHz: 120, rhythmSylPerSec: 4, pauseSec: 0.3 } },
+      transcription: { status: 'pending' },
+    };
+    const manifest = (entry: typeof take) => blob(JSON.stringify({ format: 'voxwave-sessions/1', sessions: [entry] }));
+    const files = driveFiles({ 'VOXWAVE/audio/take-1.wav': 'RIFF hardware bytes' });
+    files.set('VOXWAVE/sessions.json', manifest(take));
+    const pending = await readDeviceExport(files);
+    expect(pending.sessions[0]).toMatchObject({
+      captureClockSynced: false, startedAt: '1970-01-01T00:00:13.000Z', receivedAt: '2026-11-20T08:05:04.000Z',
+      activities: [{ audioKey: 'take-1/conversation' }], transcription: { status: 'pending' }, result: { metricsSource: 'demo' },
+    });
+    expect(pending.sessions[0]).not.toHaveProperty('simulated');
+    expect(await pending.audio[0].blob.text()).toBe('RIFF hardware bytes');
+    for (const transcription of [{ status: 'failed' }, { status: 'ready', text: "It's ten past nine." }]) {
+      files.set('VOXWAVE/sessions.json', manifest({ ...take, transcription }));
+      const newer = await readDeviceExport(files);
+      expect(mergeSyncedSessions(newer.sessions, pending.sessions).map((s) => s.transcription)).toEqual([transcription]);
+    }
+  });
+
+  it('imports the same export from a directory handle or an input FileList', async () => {
+    const sampleFile = (name: string, contents: string) => {
+      const file = new File([contents], name);
+      Object.defineProperty(file, 'webkitRelativePath', { value: `VOXWAVE/${name}` });
+      return file;
+    };
+    const files = ['device.json', 'sessions.json'].map((name) => sampleFile(name, sampleText(name)));
+    const handle = {
+      async *values() {
+        for (const file of files) yield { name: file.name, kind: 'file', getFile: async () => file };
+      },
+    } as unknown as FileSystemDirectoryHandle;
+    const fromHandle = await readDeviceExport(await filesFromDirectoryHandle(handle));
+    const fromInput = await readDeviceExport(filesFromFileList(files));
+    expect(fromHandle.sessions).toHaveLength(7);
+    expect(fromHandle).toEqual(fromInput);
+  });
+
   it('replaces sessions by id and keeps audio from an earlier sync when the new read has none', async () => {
     const withAudio = await readDeviceExport(driveFiles({ 'VOXWAVE/audio/2026-11-20_aah.wav': 'RIFF' }));
     const withoutAudio = await readDeviceExport(driveFiles());

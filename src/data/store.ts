@@ -20,6 +20,9 @@ export const STORE_KEY = 'voxwave-demo-state';
 const POLL_MS = 30_000;
 
 interface PersistedState extends SharedState {
+  /** User-picked exports belong to this browser. Remote pulls and resets on other devices cannot remove them. */
+  folderSessions: Session[];
+  folderDevices: Record<string, SyncedDevice>;
   /** Per device: the laptop stays signed in to the clinic; the phone doesn't need to be. */
   clinicSignedIn: boolean;
   /** Per device. Demo panel override; 'system' follows prefers-reduced-motion. */
@@ -32,7 +35,7 @@ interface Actions {
   /** Appends a finished patient session (audio already saved) and tells the other windows once it is stored. */
   addPatientSession: (session: Session) => Promise<void>;
   /** Saves device recordings, merges its sessions and tells the other windows. Returns how many were new. */
-  importDevice: (data: DeviceImport) => Promise<number>;
+  importDevice: (data: DeviceImport, source: 'pick' | 'sample') => Promise<number>;
   setNote: (patientId: string, text: string) => void;
   scheduleVisit: (patientId: string) => void;
   setNextResult: (mode: SharedState['nextResult']) => void;
@@ -60,7 +63,7 @@ const initialShared: SharedState = {
   rehearsal: false,
 };
 
-const initialState: PersistedState = { ...initialShared, clinicSignedIn: false, motion: 'system' };
+const initialState: PersistedState = { ...initialShared, folderSessions: [], folderDevices: {}, clinicSignedIn: false, motion: 'system' };
 
 // ---- Writes to Supabase -----------------------------------------------------------------------------------
 // Local state changes first (the UI never waits on the network), then the write is queued. Writes run one
@@ -110,19 +113,29 @@ export const useAppStore = create<AppState>()(
         );
       },
 
-      importDevice: async (data) => {
-        await saveAudioMany(data.audio);
-        const before = get().sessions;
-        const known = new Set(before.map((s) => s.id));
+      importDevice: async (data, source) => {
+        await saveAudioMany(data.audio, source === 'sample');
+        const { sessions, folderSessions } = get();
+        const known = new Map([...folderSessions, ...sessions].map((s) => [s.id, s]));
         const fresh = data.sessions.filter((s) => !known.has(s.id)).length;
         const sync: SyncedDevice = {
           deviceId: data.device.deviceId,
           patientId: data.device.patientId,
-          syncedAt: clockNow().toISOString(),
+          syncedAt: (source === 'pick' ? new Date() : clockNow()).toISOString(),
           ...(data.device.exportedAt ? { exportedAt: data.device.exportedAt } : {}),
           sessionCount: data.sessions.length,
         };
-        const merged = mergeSyncedSessions(before, data.sessions);
+        if (source === 'pick') {
+          const imported = data.sessions.map((s) => s.captureClockSynced === false && !s.receivedAt
+            ? { ...s, receivedAt: known.get(s.id)?.receivedAt ?? sync.syncedAt }
+            : s);
+          set((s) => ({
+            folderSessions: mergeSyncedSessions(s.folderSessions, imported),
+            folderDevices: { ...s.folderDevices, [sync.deviceId]: sync },
+          }));
+          return fresh;
+        }
+        const merged = mergeSyncedSessions(sessions, data.sessions);
         const imported = new Set(data.sessions.map((s) => s.id));
         set((s) => ({ sessions: merged, syncedDevices: { ...s.syncedDevices, [sync.deviceId]: sync } }));
         await share(
@@ -176,6 +189,8 @@ export const useAppStore = create<AppState>()(
         demoName: s.demoName,
         sessions: s.sessions,
         syncedDevices: s.syncedDevices,
+        folderSessions: s.folderSessions,
+        folderDevices: s.folderDevices,
         notes: s.notes,
         scheduledVisits: s.scheduledVisits,
         nextResult: s.nextResult,
@@ -197,7 +212,12 @@ async function pullOnce() {
   try {
     const shared = await fetchShared();
     // A local change queued while we were reading is newer than what we read: keep it, the next pull catches up.
-    if (seq === writeSeq) useAppStore.setState(shared);
+    if (seq !== writeSeq) return;
+    const current = useAppStore.getState();
+    // Keep a quiet poll from rewriting localStorage and rerendering every chart in every open tab.
+    const changed = (Object.keys(shared) as (keyof SharedState)[]).some((key) =>
+      JSON.stringify(current[key]) !== JSON.stringify(shared[key]));
+    if (changed) useAppStore.setState(shared);
   } catch (e) {
     console.warn('[sync] pull failed, showing the copy kept in this browser:', e);
   }
@@ -246,10 +266,17 @@ export function useDerivedData() {
   const demoName = useAppStore((s) => s.demoName);
   const sessions = useAppStore((s) => s.sessions);
   const syncedDevices = useAppStore((s) => s.syncedDevices);
+  const folderSessions = useAppStore((s) => s.folderSessions);
+  const folderDevices = useAppStore((s) => s.folderDevices);
   return useMemo(() => {
     const now = clockNow();
-    return derive(buildSeed(now), { demoName, sessions, syncedDevices }, now);
-  }, [demoName, sessions, syncedDevices]);
+    const devices = { ...syncedDevices };
+    for (const sync of Object.values(folderDevices)) {
+      if (!devices[sync.deviceId] || Date.parse(sync.syncedAt) > Date.parse(devices[sync.deviceId].syncedAt)) devices[sync.deviceId] = sync;
+    }
+    const combined = mergeSyncedSessions(folderSessions, sessions);
+    return { ...derive(buildSeed(now), { demoName, sessions: combined, syncedDevices: devices }, now), syncedDevices: devices };
+  }, [demoName, sessions, syncedDevices, folderSessions, folderDevices]);
 }
 
 export function usePatient(id: string | undefined) {

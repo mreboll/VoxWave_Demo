@@ -27,7 +27,7 @@ function deliver(env: Envelope | null) {
 }
 
 function listenRemote() {
-  if (!supabase) return;
+  if (!supabase || import.meta.env.MODE === 'device-rehearsal') return;
   remote = supabase
     .channel(CHANNEL_NAME, { config: { broadcast: { self: false } } })
     .on('broadcast', { event: REMOTE_EVENT }, ({ payload }) => deliver(payload as Envelope))

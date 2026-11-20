@@ -20,15 +20,14 @@ export async function saveAudio(key: string, blob: Blob): Promise<void> {
   if (results.every((r) => r.status === 'rejected')) throw new Error(`Recording ${key} could not be saved`);
 }
 
-export async function saveAudioMany(entries: Array<{ key: string; blob: Blob }>): Promise<void> {
+export async function saveAudioMany(entries: Array<{ key: string; blob: Blob }>, shareSample: boolean): Promise<void> {
   if (!entries.length) return;
-  await setMany(entries.map((e) => [e.key, e.blob] as [string, Blob]), store).catch((e: unknown) =>
-    console.warn('[audio] local cache unavailable:', e),
-  );
-  if (!remoteEnabled) return;
-  // A failed upload doesn't fail the sync: the clips still play on this device, just not on the others.
+  const localWrite = setMany(entries.map((e) => [e.key, e.blob] as [string, Blob]), store);
+  if (!shareSample || !remoteEnabled) return localWrite;
+  const cached = await localWrite.then(() => true, () => false);
   const results = await Promise.allSettled(entries.map((e) => uploadAudio(e.key, e.blob)));
   results.forEach((r, i) => r.status === 'rejected' && console.warn(`[audio] ${entries[i].key}:`, r.reason));
+  if (!cached && results.some((r) => r.status === 'rejected')) throw new Error('Sample recordings could not be saved');
 }
 
 export async function getAudio(key: string): Promise<Blob | undefined> {

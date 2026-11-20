@@ -13,7 +13,7 @@ import {
 } from '../../../data/deviceImport';
 import { useAppStore } from '../../../data/store';
 import { now } from '../../../data/clock';
-import { formatInSentence, formatSessionTime } from '../../../data/dates';
+import { formatInSentence, formatSessionTime, sessionTime } from '../../../data/dates';
 import { spring } from '../../../design/motion';
 import { useClinicUi } from '../clinicUi';
 import { DeviceIllustration } from './DeviceIllustration';
@@ -78,16 +78,20 @@ export function DeviceSyncModal() {
     }
     let alive = true;
     const t = window.setTimeout(async () => {
-      await importDevice(data);
-      if (!alive) return;
-      highlight(data.device.patientId);
-      setStage({ kind: 'done', data });
+      try {
+        await importDevice(data, source);
+        if (!alive) return;
+        highlight(data.device.patientId);
+        setStage({ kind: 'done', data });
+      } catch {
+        if (alive) setStage({ kind: 'error', message: 'The recording could not be saved in this browser. Check available storage and try again.' });
+      }
     }, 450);
     return () => {
       alive = false;
       window.clearTimeout(t);
     };
-  }, [stage, importDevice, highlight]);
+  }, [stage, source, importDevice, highlight]);
 
   const choose = async () => {
     const picker = directoryPicker();
@@ -96,12 +100,12 @@ export function DeviceSyncModal() {
       return;
     }
     try {
-      const dir = await picker({ id: 'voxwave-device', mode: 'read' });
+      const dir = await picker.call(window, { id: 'voxwave-device', mode: 'read' });
       await load(() => filesFromDirectoryHandle(dir));
     } catch (err) {
       // Cancelling the picker is not an error: stay on the connect step.
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      setStage({ kind: 'error', message: 'The browser could not open the drive. Try again, or use another browser (Chrome or Edge).' });
+      setStage({ kind: 'error', message: 'The browser could not open the drive. Use the folder selector to choose the VOXWAVE folder.' });
     }
   };
 
@@ -147,6 +151,7 @@ export function DeviceSyncModal() {
   const data = stage.kind === 'importing' || stage.kind === 'done' ? stage.data : null;
   const shown = stage.kind === 'importing' ? stage.shown : stage.kind === 'done' ? stage.data.sessions.length : 0;
   const patientName = data?.device.patientName ?? data?.device.patientId ?? '';
+  const lastSession = data?.sessions.at(-1);
   const screen =
     stage.kind === 'connect' ? 'VOXWAVE' : stage.kind === 'reading' ? 'READING…' : stage.kind === 'importing' ? `SYNC ${shown}/${data!.sessions.length}` : stage.kind === 'done' ? 'SYNCED ✓' : 'ERROR';
 
@@ -204,7 +209,7 @@ export function DeviceSyncModal() {
                 {stage.kind === 'connect' && (
                   <motion.div key="connect" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
                     <ol className="mt-6 space-y-3">
-                      {['Plug the device into this computer with its USB cable.', 'Choose the VOXWAVE drive (or its VOXWAVE folder).'].map((t, i) => (
+                      {['Connect the USB drive containing the device export.', 'Choose the VOXWAVE folder on the drive.'].map((t, i) => (
                         <li key={t} className="flex items-start gap-3 text-[15px] text-navy">
                           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-navy font-display text-xs font-bold text-white">
                             {i + 1}
@@ -247,10 +252,12 @@ export function DeviceSyncModal() {
                         </div>
                         <div className="text-sm text-ink-muted">
                           {stage.kind === 'done'
-                            ? `Synced ${data.sessions.length} sessions · last one ${formatInSentence(data.sessions.at(-1)!.startedAt)}`
+                            ? lastSession && lastSession.captureClockSynced !== false
+                              ? `Synced ${data.sessions.length} sessions · last one ${formatInSentence(lastSession.startedAt)}`
+                              : `Synced ${data.sessions.length} sessions · device clock unverified`
                             : `Importing session ${Math.min(shown + 1, data.sessions.length)} of ${data.sessions.length}…`}
                         </div>
-                        {stage.kind === 'done' && new Date(data.sessions.at(-1)!.startedAt).getTime() > now().getTime() && (
+                        {stage.kind === 'done' && lastSession && lastSession.captureClockSynced !== false && Date.parse(lastSession.startedAt) > now().getTime() && (
                           // Imported dates are never rewritten (D66); say why they look like the future (D77).
                           <div className="mt-1 text-xs text-ink-muted">Dates come from the device, whose clock is ahead of this computer’s.</div>
                         )}
@@ -271,7 +278,9 @@ export function DeviceSyncModal() {
                               className="flex items-center gap-3 rounded-xl bg-paper/55 px-3.5 py-1.5 text-sm"
                             >
                               <Check size={15} strokeWidth={2.5} className="text-stable-ink" />
-                              <span className="w-32 font-medium text-navy tabular-nums">{formatSessionTime(s.startedAt)}</span>
+                              <span className="w-32 font-medium text-navy tabular-nums">
+                                {s.captureClockSynced === false ? 'Device clock unverified' : formatSessionTime(sessionTime(s))}
+                              </span>
                               <span className="text-ink-muted tabular-nums">{Math.round(s.activities.reduce((t, a) => t + a.durationSec, 0))} s</span>
                               <span className="ml-auto flex items-center gap-2">
                                 {s.quality && s.quality.noise !== 'low' && (
@@ -283,7 +292,7 @@ export function DeviceSyncModal() {
                                     s.result.status === 'attention' ? 'bg-coral/12 text-coral-ink' : 'bg-stable/10 text-stable-ink'
                                   }`}
                                 >
-                                  {s.result.status === 'attention' ? 'Outside baseline' : 'Within baseline'}
+                                  {s.result.metricsSource === 'demo' ? 'Demo values' : s.result.status === 'attention' ? 'Outside baseline' : 'Within baseline'}
                                 </span>
                               </span>
                             </motion.li>
@@ -301,6 +310,9 @@ export function DeviceSyncModal() {
                       {stage.message}
                     </div>
                     <div className="mt-5 flex justify-end">
+                      <button type="button" onClick={() => inputRef.current?.click()} className="btn btn-press px-4 py-2.5 text-sm font-semibold text-navy">
+                        Choose folder
+                      </button>
                       <button
                         type="button"
                         onClick={() => setStage({ kind: 'connect' })}

@@ -2,7 +2,7 @@
 // synced device sessions. Keeping the seed out of localStorage means it never goes stale (D7) and
 // "Reset demo" only has to clear the deltas.
 import { createRng, hashString, round } from './prng';
-import { startOfWeek, toDateKey } from './dates';
+import { compareSessionTimes, sessionTime, startOfWeek, toDateKey } from './dates';
 import { DEFAULT_BASELINE_METRICS, stabilityScore, bandCenter } from './scripted';
 import { DEMO_PATIENT_ID, DEMO_STREAK_SEED, TREND_WEEKS, weekKeys, type SeedData } from './seed';
 import type { Patient, Session, WeeklyPoint } from './types';
@@ -25,8 +25,6 @@ export interface LocalState {
   syncedDevices: Record<string, SyncedDevice>;
 }
 
-const byStart = (a: Session, b: Session) => a.startedAt.localeCompare(b.startedAt);
-
 /** Distinct local days with a session. */
 const distinctDays = (sessions: Session[]) => new Set(sessions.map((s) => toDateKey(new Date(s.startedAt)))).size;
 
@@ -34,7 +32,7 @@ const distinctDays = (sessions: Session[]) => new Set(sessions.map((s) => toDate
 function weeklyPointsFrom(sessions: Session[], patient: Patient, afterWeek: string | undefined): WeeklyPoint[] {
   const groups = new Map<string, number[]>();
   for (const s of sessions) {
-    const week = toDateKey(startOfWeek(new Date(s.startedAt)));
+    const week = toDateKey(startOfWeek(new Date(sessionTime(s))));
     if (afterWeek && week <= afterWeek) continue;
     const score = stabilityScore(s.result.metrics, patient.baselineMetrics, bandCenter(patient));
     groups.set(week, [...(groups.get(week) ?? []), score]);
@@ -74,17 +72,19 @@ export function buildDemoPatient(name: string, sessions: Session[], now: Date): 
 }
 
 function applyDeviceSync(patient: Patient, sessions: Session[], sync: SyncedDevice | undefined): Patient {
-  if (!sync || sessions.length === 0) return patient;
-  const sorted = [...sessions].sort(byStart);
+  if (patient.channel !== 'device' || sessions.length === 0) return patient;
+  const sorted = [...sessions].sort(compareSessionTimes);
   const last = sorted[sorted.length - 1];
   const appended = weeklyPointsFrom(sorted, patient, patient.trend.at(-1)?.week);
   const trend = [...patient.trend, ...appended].slice(-TREND_WEEKS);
-  const newer = !patient.lastSessionAt || last.startedAt > patient.lastSessionAt;
+  const latestTime = sessionTime(last);
+  const newer = !patient.lastSessionAt || Date.parse(latestTime) >= Date.parse(patient.lastSessionAt);
   return {
     ...patient,
     trend,
-    lastSyncAt: sync.syncedAt,
-    ...(newer ? { lastSessionAt: last.startedAt, latest: last.result.metrics } : {}),
+    lastSyncAt: [sync?.syncedAt, last.receivedAt, patient.lastSyncAt].filter((s): s is string => !!s)
+      .sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1),
+    ...(newer ? { lastSessionAt: latestTime, latest: last.result.metrics } : {}),
   };
 }
 
@@ -97,7 +97,7 @@ export function derive(seed: SeedData, local: LocalState, now: Date = clockNow()
   // Seed first, local sessions override by id (a re-synced device session replaces itself, never duplicates).
   const sessionsById = new Map<string, Session>();
   for (const s of [...seed.sessions, ...local.sessions]) sessionsById.set(s.id, s);
-  const sessions = [...sessionsById.values()].sort(byStart);
+  const sessions = [...sessionsById.values()].sort(compareSessionTimes);
 
   const localByPatient = new Map<string, Session[]>();
   for (const s of local.sessions) localByPatient.set(s.patientId, [...(localByPatient.get(s.patientId) ?? []), s]);
@@ -109,7 +109,7 @@ export function derive(seed: SeedData, local: LocalState, now: Date = clockNow()
     // The demo patient takes the place of the last filler patient, so "24 patients monitored" stays literal (D31).
     const lastMinor = patients.findLastIndex((p) => p.minor);
     if (lastMinor >= 0) patients = patients.filter((_, i) => i !== lastMinor);
-    patients.push(buildDemoPatient(local.demoName, (localByPatient.get(DEMO_PATIENT_ID) ?? []).sort(byStart), now));
+    patients.push(buildDemoPatient(local.demoName, (localByPatient.get(DEMO_PATIENT_ID) ?? []).sort(compareSessionTimes), now));
   }
   return { patients, sessions };
 }
