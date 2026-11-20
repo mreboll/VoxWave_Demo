@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { Activity as ActivityIcon, ArrowRight, Radio, Search, Usb } from 'lucide-react';
-import { StatCounter } from '../../components/StatCounter';
+import { AnimatedNumber } from '../../components/AnimatedNumber';
 import { STATUS_LABEL, STATUS_ORDER } from '../../components/StatusChip';
 import { WaveformReplay } from '../../components/WaveformReplay';
 import { AudioPlayButton, usePlayback } from '../../components/AudioPlayButton';
@@ -62,7 +62,7 @@ export function Dashboard() {
         <div>
           <p className="label">Clinician dashboard · Today</p>
           <h1 className="mt-1.5 text-[32px] leading-[1.05] font-bold tracking-[-0.035em] text-navy sm:text-[38px] xl:text-[44px]">
-            <StatCounter value={patients.length} /> patients monitored
+            <AnimatedNumber value={patients.length} /> patients monitored
           </h1>
         </div>
         <motion.button
@@ -127,7 +127,7 @@ function Stat({
       </div>
       <div className="flex min-w-0 flex-col gap-x-3 gap-y-1 xl:flex-row xl:items-center">
         <div className={`numeral shrink-0 text-[28px] whitespace-nowrap sm:text-[32px] ${tone === 'coral' ? 'text-coral-strong' : 'text-navy'}`}>
-          <StatCounter value={value} suffix={suffix} delay={delay} />
+          <AnimatedNumber value={value} suffix={suffix} delay={delay} />
         </div>
         <div className="text-[13px] leading-tight text-ink-muted">{label}</div>
       </div>

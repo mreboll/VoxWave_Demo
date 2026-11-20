@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { ArrowRight, CalendarDays, Check, Flame, RotateCcw } from 'lucide-react';
 import { IdleWave } from '../../components/IdleWave';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
-import { StatCounter } from '../../components/StatCounter';
+import { AnimatedNumber } from '../../components/AnimatedNumber';
 import { useAppStore, useDemoSessions } from '../../data/store';
 import { formatDate, greeting, isSameLocalDay } from '../../data/dates';
 import { currentStreak, currentWeek, dayState, doneDays } from '../../data/patientCalendar';
@@ -48,7 +48,7 @@ export function Home() {
           <motion.div variants={riseIn} className="surface flex items-center justify-between gap-4 rounded-3xl py-4 pr-4 pl-5">
             <div className="flex min-w-0 items-baseline gap-3">
               <div className="numeral text-[48px] text-navy">
-                <StatCounter value={streak} delay={0.3} />
+                <AnimatedNumber value={streak} delay={0.3} />
               </div>
               <div className="text-[15px] leading-snug text-ink-muted">day streak — keep it going</div>
             </div>

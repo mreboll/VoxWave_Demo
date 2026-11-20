@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { useReducedMotion } from '../../design/useReducedMotion';
 import { deltaLevel, formatDelta, type BiomarkerDef } from '../../data/biomarkers';
-import { useCountUp } from '../StatCounter';
+import { useCountUp } from '../AnimatedNumber';
 import { arcPath, clamp } from './geometry';
 import { MiniLine } from './Sparkline';
 
