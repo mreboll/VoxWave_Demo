@@ -16,6 +16,7 @@ export const pages = {
   Dashboard: () => import('../features/clinic/Dashboard').then((m) => ({ Component: m.Dashboard })),
   PatientDetail: () => import('../features/clinic/PatientDetail').then((m) => ({ Component: m.PatientDetail })),
   Report: () => import('../features/clinic/Report').then((m) => ({ Component: m.Report })),
+  Paper: () => import('../features/Paper').then((m) => ({ Component: m.Paper })),
 };
 
 // Information architecture: brief §5. Everything sits under RootLayout (demo panel on every page).
@@ -26,6 +27,8 @@ export const router = createBrowserRouter([
     HydrateFallback: () => <div className="min-h-dvh bg-paper" />,
     children: [
       { path: '/', element: <Landing /> },
+      // The research paper as page images, for browsers without a PDF viewer (D115).
+      { path: '/paper', lazy: pages.Paper },
 
       { path: '/patient', element: <PatientIndex /> },
       { path: '/patient/welcome', lazy: pages.Welcome },
