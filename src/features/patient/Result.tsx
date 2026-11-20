@@ -6,7 +6,7 @@ import { Confetti } from '../../components/Confetti';
 import { IdleWave } from '../../components/IdleWave';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
 import { useCountUp } from '../../components/AnimatedNumber';
-import { useAppStore, useDemoSessions } from '../../data/store';
+import { useVisitorProfile } from '../../data/visitor';
 import { currentStreak, doneDays } from '../../data/patientCalendar';
 import { isSameLocalDay } from '../../data/dates';
 import { riseIn, spring, staggerContainer } from '../../design/motion';
@@ -23,8 +23,8 @@ const RESTING_WAVE = ['var(--color-teal)', 'var(--color-navy)', 'var(--color-cor
 export function Result() {
   const navigate = useNavigate();
   const { state } = useLocation() as { state: { sessionId?: string } | null };
-  const name = useAppStore((s) => s.demoName) ?? 'Alex';
-  const sessions = useDemoSessions();
+  const profile = useVisitorProfile()!;
+  const { name, sessions } = profile;
   const session = sessions.find((s) => s.id === state?.sessionId) ?? sessions.at(-1);
   const now = useMemo(() => clockNow(), []);
   const streak = currentStreak(doneDays(sessions, now), now);

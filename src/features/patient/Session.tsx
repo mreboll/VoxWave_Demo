@@ -10,6 +10,7 @@ import { analyserSource, createSyntheticSource, type SyntheticMode } from '../..
 import { audioKey, saveAudio } from '../../audio/storage';
 import { buildPatientSession, newSessionId, type ActivityCapture } from '../../data/patientSession';
 import { useAppStore } from '../../data/store';
+import { useVisitorStore } from '../../data/visitor';
 import { ACTIVITY_LABEL } from '../../data/biomarkers';
 import type { ActivityType } from '../../data/types';
 import { spring } from '../../design/motion';
@@ -40,7 +41,9 @@ export function Session() {
   const navigate = useNavigate();
   const mic = useMicrophone();
   const nextResult = useAppStore((s) => s.nextResult);
-  const addSession = useAppStore((s) => s.addPatientSession);
+  const addSession = useVisitorStore((s) => s.addSession);
+  const activeId = useVisitorStore((s) => s.activeId)!;
+  const profileId = useRef(activeId);
 
   const [step, setStep] = useState(0);
   const [phase, setPhase] = useState<Phase>('intro');
@@ -146,9 +149,9 @@ export function Session() {
       const key = audioKey(sessionId.current, type);
       capture.audioKey = key;
       capture.mimeType = result.mimeType;
-      // Saved in the background; the session is only published once every save has settled.
+      // Keep this trial recording in the visitor's browser.
       saves.current.push(
-        saveAudio(key, result.blob).catch(() => {
+        saveAudio(key, result.blob, false).catch(() => {
           delete capture.audioKey; // IndexedDB unavailable (e.g. some private modes): no audio for this one
         }),
       );
@@ -237,8 +240,9 @@ export function Session() {
   const publish = useCallback(async () => {
     await Promise.allSettled(saves.current);
     const ordered = ACTIVITIES.map((t) => captures.current.find((c) => c.type === t)).filter(Boolean) as ActivityCapture[];
-    const session = buildPatientSession(sessionId.current, startedAt.current, ordered, nextResult);
-    addSession(session); // stored + announced to the clinic tab (hand-off, milestone 5)
+    const session = buildPatientSession(sessionId.current, startedAt.current, ordered, nextResult, profileId.current);
+    addSession(session);
+    useAppStore.setState({ nextResult: 'stable' });
     mic.release();
     navigate('/patient/result', { replace: true, state: { sessionId: session.id } });
   }, [addSession, mic, navigate, nextResult]);

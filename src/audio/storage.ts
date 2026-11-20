@@ -13,8 +13,8 @@ export const audioKey = (sessionId: string, type: Activity['type']) => `${sessio
  * Saves a recording locally and, when shared data is on, uploads it. Fails only if it ended up nowhere:
  * either copy is enough for the session to keep its audio.
  */
-export async function saveAudio(key: string, blob: Blob): Promise<void> {
-  const ops = [set(key, blob, store), ...(remoteEnabled ? [uploadAudio(key, blob)] : [])];
+export async function saveAudio(key: string, blob: Blob, share = true): Promise<void> {
+  const ops = [set(key, blob, store), ...(share && remoteEnabled ? [uploadAudio(key, blob)] : [])];
   const results = await Promise.allSettled(ops);
   results.forEach((r) => r.status === 'rejected' && console.warn(`[audio] ${key}:`, r.reason));
   if (results.every((r) => r.status === 'rejected')) throw new Error(`Recording ${key} could not be saved`);

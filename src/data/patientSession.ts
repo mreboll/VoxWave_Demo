@@ -23,6 +23,7 @@ export function buildPatientSession(
   startedAt: Date,
   captures: ActivityCapture[],
   mode: ResultMode,
+  patientId: string = DEMO_PATIENT_ID,
 ): Session {
   const activities: Activity[] = captures.map((c) => ({
     type: c.type,
@@ -38,7 +39,7 @@ export function buildPatientSession(
   }));
   return {
     id,
-    patientId: DEMO_PATIENT_ID,
+    patientId,
     startedAt: startedAt.toISOString(),
     channel: 'app',
     activities,

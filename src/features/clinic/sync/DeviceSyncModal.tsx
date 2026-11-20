@@ -12,6 +12,7 @@ import {
   type DeviceImport,
 } from '../../../data/deviceImport';
 import { useAppStore } from '../../../data/store';
+import { buildSeed } from '../../../data/seed';
 import { now } from '../../../data/clock';
 import { formatInSentence, formatSessionTime, sessionTime } from '../../../data/dates';
 import { spring } from '../../../design/motion';
@@ -150,7 +151,8 @@ export function DeviceSyncModal() {
   }, [open, close]);
   const data = stage.kind === 'importing' || stage.kind === 'done' ? stage.data : null;
   const shown = stage.kind === 'importing' ? stage.shown : stage.kind === 'done' ? stage.data.sessions.length : 0;
-  const patientName = data?.device.patientName ?? data?.device.patientId ?? '';
+  const patientName = buildSeed().patients.find((p) => p.id === data?.device.patientId)?.name
+    ?? data?.device.patientName ?? data?.device.patientId ?? '';
   const lastSession = data?.sessions.at(-1);
   const screen =
     stage.kind === 'connect' ? 'VOXWAVE' : stage.kind === 'reading' ? 'READING…' : stage.kind === 'importing' ? `SYNC ${shown}/${data!.sessions.length}` : stage.kind === 'done' ? 'SYNCED ✓' : 'ERROR';
