@@ -5,7 +5,7 @@ import { ArrowRight, CalendarDays, Check, Flame, RotateCcw } from 'lucide-react'
 import { IdleWave } from '../../components/IdleWave';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
 import { AnimatedNumber } from '../../components/AnimatedNumber';
-import { useAppStore, useDemoSessions } from '../../data/store';
+import { useVisitorProfile } from '../../data/visitor';
 import { formatDate, greeting, isSameLocalDay } from '../../data/dates';
 import { currentStreak, currentWeek, dayState, doneDays } from '../../data/patientCalendar';
 import { ACTIVITY_LABEL } from '../../data/biomarkers';
@@ -19,8 +19,8 @@ const HEADER_WAVE = ['var(--color-teal)', 'var(--color-coral-soft)', 'var(--colo
 /** Greeting, streak, today's session and the week (brief §6.2). */
 export function Home() {
   const navigate = useNavigate();
-  const name = useAppStore((s) => s.demoName) ?? 'Alex';
-  const sessions = useDemoSessions();
+  const profile = useVisitorProfile()!;
+  const { name, sessions } = profile;
   const now = useMemo(() => clockNow(), []);
   const done = useMemo(() => doneDays(sessions, now), [sessions, now]);
   const streak = currentStreak(done, now);

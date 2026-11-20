@@ -11,7 +11,7 @@ export interface MicHandles {
 type AudioContextCtor = typeof AudioContext;
 
 /**
- * Microphone + analyser for the live waveform (brief §6.3). Audio never leaves the device.
+ * Microphone + analyser for the live waveform (brief §6.3).
  *
  * `request()` must be called from a tap/click: iOS Safari only lets an AudioContext start inside a user
  * gesture, so the context is created and resumed *before* awaiting the permission prompt.

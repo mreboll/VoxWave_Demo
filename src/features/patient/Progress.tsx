@@ -6,7 +6,7 @@ import { ArrowLeft, Check, Flame, Trophy } from 'lucide-react';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
 import { AnimatedNumber } from '../../components/AnimatedNumber';
 import { smoothPath, linear } from '../../components/charts/geometry';
-import { useDemoSessions } from '../../data/store';
+import { useVisitorProfile } from '../../data/visitor';
 import { addDays, formatDate, formatDay, isSameLocalDay, startOfDay } from '../../data/dates';
 import { bestStreak, calendarWeeks, currentStreak, dayState, doneDays } from '../../data/patientCalendar';
 import { createRng } from '../../data/prng';
@@ -19,7 +19,7 @@ const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 /** Calendar of the last 8 weeks, streaks and a friendly unit-less line (brief §6.6). */
 export function Progress() {
   const navigate = useNavigate();
-  const sessions = useDemoSessions();
+  const { sessions } = useVisitorProfile()!;
   const now = useMemo(() => clockNow(), []);
   const done = useMemo(() => doneDays(sessions, now), [sessions, now]);
   const streak = currentStreak(done, now);

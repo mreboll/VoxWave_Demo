@@ -31,7 +31,7 @@ function driveFiles(extra: Record<string, string> = {}): DeviceFiles {
 describe('device import — bundled sample (final: 14–20 Nov 2026)', () => {
   it('reads 7 sessions, oldest → newest, the last on the 20th at 06:05Z', async () => {
     const result = await readDeviceExport(driveFiles());
-    expect(result.device).toMatchObject({ deviceId: 'VW-DEV-0003', patientId: 'P-0142', patientName: 'Robert Hayes' });
+    expect(result.device).toMatchObject({ deviceId: 'VW-DEV-0003', patientId: 'P-0142', patientName: 'Javier de Paz' });
     expect(result.device.exportedAt).toBe('2026-11-20T07:30:00Z');
     expect(result.sessions).toHaveLength(7);
     expect(result.sessions.map((s) => s.startedAt.slice(0, 10))).toEqual([

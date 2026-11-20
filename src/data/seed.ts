@@ -83,7 +83,7 @@ const MAIN: PatientSpec[] = [
   },
   {
     id: 'P-0142',
-    name: 'Robert Hayes',
+    name: 'Javier de Paz',
     age: 78,
     yearsSinceDiagnosis: 9,
     channel: 'device',

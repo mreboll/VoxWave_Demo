@@ -1,22 +1,20 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowRight, Check, Lock } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { LogoAnimation } from '../../components/LogoAnimation';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
-import { useAppStore } from '../../data/store';
+import { useVisitorProfile, useVisitorStore } from '../../data/visitor';
 import { riseIn, staggerContainer } from '../../design/motion';
 import { PhoneFrame } from './PatientShell';
 
-/** Welcome + consent in one step (brief §6.1). Creates the demo patient P-DEMO. */
+/** Welcome and consent for this browser's trial profile. */
 export function Welcome() {
   const navigate = useNavigate();
-  const existing = useAppStore((s) => s.demoName);
-  const start = useAppStore((s) => s.startAsPatient);
-  const [name, setName] = useState('');
+  const existing = useVisitorProfile();
+  const start = useVisitorStore((s) => s.start);
+  const [name, setName] = useState(existing?.name ?? '');
   const [agreed, setAgreed] = useState(false);
-
-  if (existing !== null) return <Navigate to="/patient/home" replace />;
 
   return (
     <PhoneFrame>
@@ -40,7 +38,7 @@ export function Welcome() {
           Hi, I'm VoxWave.
         </motion.h1>
         <motion.p variants={riseIn} className="mt-3 text-[16px] leading-relaxed text-ink-muted">
-          Every day, a 3-minute voice session. Your doctor sees how your voice is doing between visits.
+          Try a 3-minute voice session. Your trial profile and progress are saved in this browser.
         </motion.p>
 
         <motion.label variants={riseIn} className="mt-8 block">
@@ -61,7 +59,7 @@ export function Welcome() {
           onClick={() => setAgreed((a) => !a)}
           role="checkbox"
           aria-checked={agreed}
-          aria-label="Your recordings stay on this device. I agree to record short voice sessions."
+          aria-label="I agree to record short voice sessions."
           className={`mt-4 flex items-start gap-3 rounded-2xl p-4 text-left ring-1 ring-inset transition-colors ${
             agreed ? 'bg-teal/8 ring-teal/40' : 'bg-card ring-ink-faint'
           }`}
@@ -79,14 +77,8 @@ export function Welcome() {
               )}
             </AnimatePresence>
           </span>
-          <span>
-            <span className="flex items-center gap-1.5 font-semibold text-navy">
-              <Lock size={14} />
-              Your recordings stay on this device
-            </span>
-            <span className="mt-1 block text-sm text-ink-muted">
-              In this demo, nothing is uploaded. I agree to record short voice sessions.
-            </span>
+          <span className="self-center text-sm text-navy">
+            I agree to record short voice sessions.
           </span>
         </motion.button>
 

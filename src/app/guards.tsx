@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { useAppStore } from '../data/store';
+import { useVisitorProfile } from '../data/visitor';
 
 // Route guards live outside the portals so they don't pull a whole portal chunk into the main bundle (D70).
 // Redirects keep the query string (e.g. ?demo=1) and, for the clinic, where you were going (D96).
@@ -17,15 +18,14 @@ export function ClinicIndex() {
   return <Navigate to={{ pathname: signedIn ? '/clinic/dashboard' : '/clinic/login', search }} replace />;
 }
 
-/** Patient pages need the demo patient (welcome + consent) to exist. */
+/** Patient pages need welcome and consent completed in this browser. */
 export function RequirePatient() {
-  const name = useAppStore((s) => s.demoName);
+  const profile = useVisitorProfile();
   const { search } = useLocation();
-  return name === null ? <Navigate to={{ pathname: '/patient/welcome', search }} replace /> : <Outlet />;
+  return profile ? <Outlet /> : <Navigate to={{ pathname: '/patient/welcome', search }} replace />;
 }
 
 export function PatientIndex() {
-  const name = useAppStore((s) => s.demoName);
   const { search } = useLocation();
-  return <Navigate to={{ pathname: name === null ? '/patient/welcome' : '/patient/home', search }} replace />;
+  return <Navigate to={{ pathname: '/patient/welcome', search }} replace />;
 }
