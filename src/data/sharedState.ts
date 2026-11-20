@@ -1,6 +1,8 @@
 // Pure mapping between the app's shared state and the Supabase rows (D114). No network here: remote.ts
 // does the I/O, this file decides what each row means, so it can be unit-tested.
 import type { SyncedDevice } from './derive';
+import { compareSessionTimes } from './dates';
+import { parseTranscription } from './deviceImport';
 import type { ResultMode } from './scripted';
 import type { Session } from './types';
 
@@ -45,7 +47,7 @@ function isSession(v: unknown): v is Session {
     isObj(v) &&
     isStr(v.id) &&
     isStr(v.patientId) &&
-    isStr(v.startedAt) &&
+    isStr(v.startedAt) && Number.isFinite(Date.parse(v.startedAt)) &&
     Array.isArray(v.activities) &&
     isObj(v.result) &&
     isObj(v.result.metrics)
@@ -67,7 +69,15 @@ export const sessionToRow = (s: Session): SessionRow => ({
 export function rowsToShared(kv: KvRow[], sessionRows: SessionRow[]): SharedState {
   const out: SharedState = {
     demoName: null,
-    sessions: sessionRows.map((r) => r.data).filter(isSession).sort((a, b) => a.startedAt.localeCompare(b.startedAt)),
+    sessions: sessionRows.map((r) => r.data).filter(isSession).map((s) => {
+      const { transcription, receivedAt, ...session } = s;
+      const parsed = parseTranscription(transcription);
+      return {
+        ...session,
+        ...(parsed ? { transcription: parsed } : {}),
+        ...(typeof receivedAt === 'string' && Number.isFinite(Date.parse(receivedAt)) ? { receivedAt } : {}),
+      };
+    }).sort(compareSessionTimes),
     syncedDevices: {},
     notes: {},
     scheduledVisits: {},

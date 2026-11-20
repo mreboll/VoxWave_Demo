@@ -6,8 +6,10 @@ import { TrendChart } from '../../components/charts/TrendChart';
 import { BiomarkerRing } from '../../components/charts/BiomarkerRing';
 import { StatusChip } from '../../components/StatusChip';
 import { AudioPlayButton } from '../../components/AudioPlayButton';
-import { useAppStore, usePatient } from '../../data/store';
-import { formatDay, formatSessionTime, isSameLocalDay } from '../../data/dates';
+import { refreshShared, useAppStore, usePatient } from '../../data/store';
+import { remoteEnabled } from '../../data/remote';
+import { DEVICE_PATIENT_ID } from '../../data/seed';
+import { formatDay, formatSessionTime, isSameLocalDay, sessionTime } from '../../data/dates';
 import { weeksOutsideBand } from '../../data/scripted';
 import { ACTIVITY_SHORT, BIOMARKERS } from '../../data/biomarkers';
 import { patientNumber } from '../../data/clinicText';
@@ -25,6 +27,22 @@ export function PatientDetail() {
     window.scrollTo({ top: 0 });
   }, [id]);
 
+  // The Pi writes REST rows without the browser's Realtime broadcast. Poll while its chart is open,
+  // including before the first capture and after a failed transcription that can be retried.
+  useEffect(() => {
+    if (id !== DEVICE_PATIENT_ID || !remoteEnabled) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) void refreshShared();
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 1500);
+    window.addEventListener('online', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('online', refresh);
+    };
+  }, [id]);
+
   if (!patient) {
     return (
       <div className="py-24 text-center">
@@ -38,7 +56,9 @@ export function PatientDetail() {
 
   const recent = [...sessions].reverse();
   const lastSession = recent[0];
-  const biomarkersToday = lastSession && isSameLocalDay(new Date(lastSession.startedAt), now());
+  const recording = recent.find((s) => s.channel === 'device' && s.transcription);
+  const history = recording ? recent.filter((s) => s.id !== recording.id) : recent;
+  const biomarkersToday = lastSession && isSameLocalDay(new Date(sessionTime(lastSession)), now());
 
   return (
     <motion.div variants={staggerContainer(0.1)} initial="hidden" animate="show" className="mx-auto max-w-[1180px]">
@@ -53,8 +73,15 @@ export function PatientDetail() {
         patient={patient}
         // A synced device can carry sessions dated after this computer's clock (the sample USB is dated for the
         // final). Dates are never rewritten (D66), so say why they look like the future (D88).
-        deviceAhead={sessions.some((s) => s.channel === 'device' && new Date(s.startedAt).getTime() > now().getTime())}
+        deviceAhead={sessions.some((s) => s.channel === 'device' && s.captureClockSynced !== false && Date.parse(s.startedAt) > now().getTime())}
       />
+
+      {recording && (
+        <motion.section variants={riseIn} aria-label="Latest device recording" className="surface mt-4 rounded-2xl p-5 sm:px-6">
+          <h2 className="font-display text-lg font-bold tracking-tight text-navy">Latest device recording</h2>
+          <SessionsList sessions={[recording]} />
+        </motion.section>
+      )}
 
       {/* Close under the header, so at 1024×768 the whole chart (and the points outside the band) is on the
           first screen when the presenter opens Margaret. */}
@@ -70,7 +97,8 @@ export function PatientDetail() {
 
       <motion.section variants={riseIn} className="mt-6">
         <h2 className="font-display text-lg font-bold tracking-tight text-navy">
-          Biomarkers · {biomarkersToday ? 'today' : lastSession ? `latest session (${formatDay(lastSession.startedAt)})` : 'latest'}
+          Biomarkers · {biomarkersToday ? 'today' : lastSession ? `latest session (${formatDay(sessionTime(lastSession))})` : 'latest'}
+          {lastSession?.result.metricsSource === 'demo' && <span className="ml-3 text-sm font-medium text-ink-muted">Demo values</span>}
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {BIOMARKERS.map((def, i) => (
@@ -89,10 +117,10 @@ export function PatientDetail() {
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_340px]">
         <motion.section variants={riseIn} className="surface rounded-2xl p-5 sm:px-6">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-display text-lg font-bold tracking-tight text-navy">Sessions</h2>
-            <span className="text-xs text-ink-muted tabular-nums">{sessions.length} recent</span>
+            <h2 className="font-display text-lg font-bold tracking-tight text-navy">{recording ? 'Other sessions' : 'Sessions'}</h2>
+            <span className="text-xs text-ink-muted tabular-nums">{history.length} recent</span>
           </div>
-          <SessionsList sessions={recent} />
+          <SessionsList sessions={history} />
         </motion.section>
         {/* The notes stay in view while the (long) session list scrolls. */}
         <motion.section variants={riseIn} className="lg:sticky lg:top-6">
@@ -210,7 +238,10 @@ function SessionsList({ sessions }: { sessions: Session[] }) {
           className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 py-2.5 @[34rem]:grid-cols-[9rem_minmax(0,1fr)_auto]"
         >
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-navy tabular-nums">{formatSessionTime(s.startedAt)}</div>
+            <div className="text-sm font-semibold text-navy tabular-nums">
+              {s.captureClockSynced === false && s.receivedAt && 'Received '}
+              {formatSessionTime(sessionTime(s))}
+            </div>
             <div className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-ink-muted tabular-nums">
               {s.channel === 'device' ? <Radio size={12} /> : <Smartphone size={12} />}
               {s.channel === 'device' ? 'Device' : 'App'} · {Math.round(durationOf(s))} s
@@ -231,7 +262,9 @@ function SessionsList({ sessions }: { sessions: Session[] }) {
                 Background noise
               </span>
             )}
-            {s.result.status === 'attention' ? (
+            {s.result.metricsSource === 'demo' ? (
+              <span className="rounded-full bg-navy/6 px-2 py-0.5 text-[11px] font-semibold text-navy/70">Demo values</span>
+            ) : s.result.status === 'attention' ? (
               <span className="rounded-full bg-coral/12 px-2 py-0.5 text-[11px] font-semibold text-coral-ink">Outside baseline</span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-stable/10 px-2 py-0.5 text-[11px] font-semibold text-stable-ink">
@@ -245,6 +278,17 @@ function SessionsList({ sessions }: { sessions: Session[] }) {
               <AudioPlayButton key={a.type} id={`${s.id}/${a.type}`} activity={a} label={ACTIVITY_SHORT[a.type]} />
             ))}
           </div>
+          {s.transcription && (
+            <div aria-live="polite" className="col-span-full rounded-xl bg-paper/60 px-3 py-2 text-sm text-navy">
+              <span className="label">Transcript</span>
+              <p className="mt-1 whitespace-pre-wrap break-words">
+                {s.transcription.status === 'ready' ? s.transcription.text : s.transcription.status === 'pending' ? 'Transcribing.' : 'Transcription unavailable.'}
+              </p>
+            </div>
+          )}
+          {s.captureClockSynced === false && (
+            <p className="col-span-full text-xs text-ink-muted">Device clock at capture (unverified) · {formatSessionTime(s.startedAt)}</p>
+          )}
         </motion.li>
       ))}
     </motion.ul>

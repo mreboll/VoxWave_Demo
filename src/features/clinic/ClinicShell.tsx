@@ -60,7 +60,7 @@ export function ClinicShell() {
   const nav = [
     { to: '/clinic/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/clinic/dashboard#patients', label: 'Patients', icon: Users, match: '/clinic/patients' },
-    { label: 'Device sync', icon: Usb, onClick: () => (pathname === '/clinic/dashboard' ? openSync() : navigate('/clinic/dashboard?sync=1')) },
+    { label: 'Device sync', icon: Usb, onClick: () => openSync() },
     { to: `/clinic/patients/${ALERT_PATIENT_ID}/report`, label: 'Reports', icon: FileText },
   ];
 

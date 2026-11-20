@@ -3,6 +3,12 @@
 // rewritten.
 import { now as clockNow, timeZone } from './clock';
 import { instantOf, partsIn } from './tz';
+import type { Session } from './types';
+
+/** Order unsynchronised captures by receipt while retaining the device clock for inspection. */
+export const sessionTime = (s: Session) => s.captureClockSynced === false && s.receivedAt ? s.receivedAt : s.startedAt;
+export const compareSessionTimes = (a: Session, b: Session) =>
+  Date.parse(sessionTime(a)) - Date.parse(sessionTime(b)) || Date.parse(a.startedAt) - Date.parse(b.startedAt);
 
 const parts = (d: Date) => partsIn(d, timeZone());
 const pad = (n: number) => String(n).padStart(2, '0');

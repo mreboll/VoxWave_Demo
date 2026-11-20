@@ -76,6 +76,20 @@ describe('derive', () => {
     const d = derive(generateSeed(FINAL), { ...empty, demoName: 'Alex', sessions: [s, { ...s }] }, FINAL);
     expect(d.sessions.filter((x) => x.id === s.id)).toHaveLength(1);
   });
+
+  it('places a received recording first even when the device clock was reset and no device KV was published', () => {
+    const recordedAt = '1970-01-01T00:02:11Z';
+    const receivedAt = FINAL.toISOString();
+    const take: Session = {
+      ...demoSession(recordedAt), patientId: DEVICE_PATIENT_ID, channel: 'device',
+      receivedAt, captureClockSynced: false, transcription: { status: 'pending' },
+    };
+    const data = derive(generateSeed(FINAL), { ...empty, sessions: [take] }, FINAL);
+    expect(data.sessions.filter((s) => s.patientId === DEVICE_PATIENT_ID).at(-1)).toEqual(take);
+    expect(data.patients.find((p) => p.id === DEVICE_PATIENT_ID)).toMatchObject({
+      lastSessionAt: receivedAt, lastSyncAt: receivedAt, latest: take.result.metrics,
+    });
+  });
 });
 
 describe('scriptedResult', () => {

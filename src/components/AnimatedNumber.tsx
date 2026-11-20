@@ -27,7 +27,7 @@ export function useCountUp(value: number, { duration = 1.1, delay = 0 } = {}) {
   return display;
 }
 
-interface StatCounterProps {
+interface AnimatedNumberProps {
   value: number;
   decimals?: number;
   suffix?: string;
@@ -35,7 +35,7 @@ interface StatCounterProps {
   className?: string;
 }
 
-export function StatCounter({ value, decimals = 0, suffix = '', delay = 0, className = '' }: StatCounterProps) {
+export function AnimatedNumber({ value, decimals = 0, suffix = '', delay = 0, className = '' }: AnimatedNumberProps) {
   const v = useCountUp(value, { delay });
   return (
     <span className={`tabular-nums ${className}`}>

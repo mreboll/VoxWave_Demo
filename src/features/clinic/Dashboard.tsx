@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { AnimatePresence, motion } from 'motion/react';
 import { Activity as ActivityIcon, ArrowRight, Radio, Search, Usb } from 'lucide-react';
-import { StatCounter } from '../../components/StatCounter';
+import { AnimatedNumber } from '../../components/AnimatedNumber';
 import { STATUS_LABEL, STATUS_ORDER } from '../../components/StatusChip';
 import { WaveformReplay } from '../../components/WaveformReplay';
 import { AudioPlayButton, usePlayback } from '../../components/AudioPlayButton';
 import { useAudioEnvelope } from '../../audio/envelope';
-import { useAppStore, useDerivedData } from '../../data/store';
-import { formatSessionTime } from '../../data/dates';
+import { useDerivedData } from '../../data/store';
+import { formatSessionTime, sessionTime } from '../../data/dates';
 import { weeksOutsideBand } from '../../data/scripted';
 import { ACTIVITY_LABEL, ACTIVITY_SHORT } from '../../data/biomarkers';
 import { patientNumber, WEEK_ADHERENCE_PCT } from '../../data/clinicText';
@@ -25,8 +25,7 @@ const sortPatients = (a: Patient, b: Patient) =>
   (b.lastSessionAt ?? '').localeCompare(a.lastSessionAt ?? '');
 
 export function Dashboard() {
-  const { patients, sessions } = useDerivedData();
-  const syncedDevices = useAppStore((s) => s.syncedDevices);
+  const { patients, sessions, syncedDevices } = useDerivedData();
   const openSync = useClinicUi((s) => s.openSync);
   const [params, setParams] = useSearchParams();
   const { hash } = useLocation();
@@ -52,7 +51,7 @@ export function Dashboard() {
   const nowMs = now().getTime();
   const latest =
     sessions.find((s) => s.id === liveSessionId) ??
-    [...sessions].reverse().find((s) => new Date(s.startedAt).getTime() <= nowMs);
+    [...sessions].reverse().find((s) => Date.parse(sessionTime(s)) <= nowMs);
   const latestPatient = latest && patients.find((p) => p.id === latest.patientId);
 
   return (
@@ -63,7 +62,7 @@ export function Dashboard() {
         <div>
           <p className="label">Clinician dashboard · Today</p>
           <h1 className="mt-1.5 text-[32px] leading-[1.05] font-bold tracking-[-0.035em] text-navy sm:text-[38px] xl:text-[44px]">
-            <StatCounter value={patients.length} /> patients monitored
+            <AnimatedNumber value={patients.length} /> patients monitored
           </h1>
         </div>
         <motion.button
@@ -128,7 +127,7 @@ function Stat({
       </div>
       <div className="flex min-w-0 flex-col gap-x-3 gap-y-1 xl:flex-row xl:items-center">
         <div className={`numeral shrink-0 text-[28px] whitespace-nowrap sm:text-[32px] ${tone === 'coral' ? 'text-coral-strong' : 'text-navy'}`}>
-          <StatCounter value={value} suffix={suffix} delay={delay} />
+          <AnimatedNumber value={value} suffix={suffix} delay={delay} />
         </div>
         <div className="text-[13px] leading-tight text-ink-muted">{label}</div>
       </div>
@@ -220,7 +219,8 @@ function LiveCheckIn({ session, patient }: { session: Session; patient: Patient 
         </span>
         {/* "Just now" only for a session that really is recent: a synced device brings older ones. */}
         <span className="text-xs text-white/60">
-          {arrived && now().getTime() - new Date(session.startedAt).getTime() < 10 * 60_000 ? 'Just now' : formatSessionTime(session.startedAt)}
+          {session.captureClockSynced === false && session.receivedAt && 'Received '}
+          {arrived && now().getTime() - Date.parse(sessionTime(session)) < 10 * 60_000 ? 'Just now' : formatSessionTime(sessionTime(session))}
         </span>
       </div>
       <AnimatePresence mode="wait">

@@ -1,6 +1,7 @@
 // Reads the VoxWave home device export (brief §8.2). Read-only: never writes to the drive.
 // Validates the format strings, ignores unknown fields and tolerates missing audio files.
 import type { Activity, ActivityType, Metrics, NoiseLevel, ResultStatus, Session } from './types';
+import { compareSessionTimes } from './dates';
 
 export const DEVICE_FORMAT = 'voxwave-device/1';
 export const SESSIONS_FORMAT = 'voxwave-sessions/1';
@@ -47,6 +48,13 @@ const isObj = (v: unknown): v is Json => typeof v === 'object' && v !== null && 
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isDate = (v: unknown): v is string => isStr(v) && !Number.isNaN(Date.parse(v));
+
+export function parseTranscription(value: unknown): Session['transcription'] {
+  if (!isObj(value)) return undefined;
+  if (value.status === 'pending' || value.status === 'failed') return { status: value.status };
+  if (value.status === 'ready' && isStr(value.text) && value.text.trim()) return { status: 'ready', text: value.text };
+  return undefined;
+}
 
 export function parseDevice(json: unknown): DeviceInfo {
   if (!isObj(json)) throw new DeviceImportError('device.json is not a JSON object.');
@@ -145,6 +153,7 @@ export function parseSessions(json: unknown, device: DeviceInfo, files: DeviceFi
     }
 
     const noise = isObj(raw.quality) && NOISE.includes(raw.quality.noise as NoiseLevel) ? (raw.quality.noise as NoiseLevel) : undefined;
+    const transcription = parseTranscription(raw.transcription);
     seen.add(raw.id);
     sessions.push({
       id: raw.id,
@@ -152,12 +161,15 @@ export function parseSessions(json: unknown, device: DeviceInfo, files: DeviceFi
       startedAt: new Date(raw.startedAt).toISOString(),
       channel: 'device',
       activities,
-      result: { status, metrics },
+      result: { status, metrics, ...(result.metricsSource === 'demo' ? { metricsSource: 'demo' } : {}) },
+      ...(transcription ? { transcription } : {}),
+      ...(typeof raw.captureClockSynced === 'boolean' ? { captureClockSynced: raw.captureClockSynced } : {}),
+      ...(isDate(raw.receivedAt) ? { receivedAt: new Date(raw.receivedAt).toISOString() } : {}),
       ...(noise ? { quality: { noise } } : {}),
     });
   });
 
-  sessions.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  sessions.sort(compareSessionTimes);
   return { sessions, audio, warnings };
 }
 
@@ -170,8 +182,16 @@ export function mergeSyncedSessions(existing: Session[], incoming: Session[]): S
   const merged = incoming.map((session) => {
     const old = previous.get(session.id);
     if (!old) return session;
+    // A stale snapshot may contain the same capture before Whisper finished or before it reported a failure.
+    const transcription = session.transcription?.status === 'ready' ? session.transcription
+      : old.transcription?.status === 'ready' || old.transcription?.status === 'failed' ? old.transcription
+      : session.transcription ?? old.transcription;
     return {
+      ...(old.receivedAt ? { receivedAt: old.receivedAt } : {}),
+      ...(old.captureClockSynced !== undefined ? { captureClockSynced: old.captureClockSynced } : {}),
       ...session,
+      ...(transcription ? { transcription } : {}),
+      result: { ...old.result, ...session.result },
       activities: session.activities.map((a) => {
         const before = old.activities.find((o) => o.type === a.type);
         return a.audioKey || !before?.audioKey ? a : { ...a, audioKey: before.audioKey, mimeType: before.mimeType };

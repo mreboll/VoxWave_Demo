@@ -5,7 +5,7 @@ import { ArrowRight, Flame, HeartHandshake } from 'lucide-react';
 import { Confetti } from '../../components/Confetti';
 import { IdleWave } from '../../components/IdleWave';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
-import { useCountUp } from '../../components/StatCounter';
+import { useCountUp } from '../../components/AnimatedNumber';
 import { useAppStore, useDemoSessions } from '../../data/store';
 import { currentStreak, doneDays } from '../../data/patientCalendar';
 import { isSameLocalDay } from '../../data/dates';

@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { useReducedMotion } from '../../design/useReducedMotion';
 import { ArrowLeft, Check, Flame, Trophy } from 'lucide-react';
 import { PrototypeFooter } from '../../components/PrototypeFooter';
-import { StatCounter } from '../../components/StatCounter';
+import { AnimatedNumber } from '../../components/AnimatedNumber';
 import { smoothPath, linear } from '../../components/charts/geometry';
 import { useDemoSessions } from '../../data/store';
 import { addDays, formatDate, formatDay, isSameLocalDay, startOfDay } from '../../data/dates';
@@ -45,7 +45,7 @@ export function Progress() {
           <div className="surface rounded-3xl p-4">
             <div className="flex items-center justify-between">
               <div className="numeral text-[40px] text-navy">
-                <StatCounter value={streak} />
+                <AnimatedNumber value={streak} />
               </div>
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-coral/12">
                 <Flame size={20} className="fill-coral/25 text-coral" />
@@ -56,7 +56,7 @@ export function Progress() {
           <div className="surface rounded-3xl p-4">
             <div className="flex items-center justify-between">
               <div className="numeral text-[40px] text-navy">
-                <StatCounter value={bestStreak(streak)} delay={0.1} />
+                <AnimatedNumber value={bestStreak(streak)} delay={0.1} />
               </div>
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-teal/10">
                 <Trophy size={20} className="text-teal" />

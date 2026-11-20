@@ -61,7 +61,7 @@ export function AudioPlayButton({ id, activity, label }: AudioPlayButtonProps) {
   const playing = usePlayback((s) => s.current === id);
   const progress = usePlayback((s) => (s.current === id ? s.progress : 0));
   const [missing, setMissing] = useState(false);
-  const available = hasAudio(activity) && !missing;
+  const available = hasAudio(activity);
 
   useEffect(() => () => {
     if (usePlayback.getState().current === id) usePlayback.getState().stop();
@@ -84,17 +84,18 @@ export function AudioPlayButton({ id, activity, label }: AudioPlayButtonProps) {
       onClick={async () => {
         if (playing) return usePlayback.getState().stop();
         const ok = await usePlayback.getState().play(id, activity);
-        if (!ok) setMissing(true);
+        setMissing(!ok);
       }}
       className={`btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
         playing ? 'bg-navy text-white ring-navy' : 'bg-card text-navy ring-ink-faint'
       }`}
-      aria-label={`${playing ? 'Stop' : 'Play'} ${label}`}
+      title={missing ? 'Audio unavailable. Press to retry playback.' : undefined}
+      aria-label={`${playing ? 'Stop' : missing ? 'Retry' : 'Play'} ${label}`}
     >
       {playing && <span className="absolute inset-0 origin-left bg-coral/35" style={{ transform: `scaleX(${progress})` }} />}
       <span className="relative inline-flex items-center gap-1.5">
         {playing ? <Pause size={11} fill="currentColor" /> : <Play size={11} fill="currentColor" />}
-        {label}
+        {missing && !playing ? 'Retry' : label}
       </span>
     </motion.button>
   );
